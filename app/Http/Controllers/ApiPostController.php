@@ -52,7 +52,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ApiPostController extends Controller
 {
-     /**
+    /**
      * @OA\Get(
      *     path="/api/posts",
      *     summary="Get all posts",
@@ -76,15 +76,14 @@ class ApiPostController extends Controller
     {
         $posts = Post::all();
 
-        if($posts == null){
+        if ($posts == null) {
             return response()->json([
                 'status' => false,
                 "message" => 'No Posts'
-            ],404);
+            ], 404);
         }
 
         return PostResource::collection($posts);
-
     }
 
     /**
@@ -119,116 +118,255 @@ class ApiPostController extends Controller
     {
         $post = Post::find($id);
 
-        if($post == null){
+        if ($post == null) {
             return response()->json([
                 'status' => false,
                 "message" => 'Post Not Found'
-            ],404);
+            ], 404);
         }
         return new PostResource($post);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/post/create",
+     *     summary="Create a new post",
+     *     description="Creates a new post with a title and content",
+     *     tags={"Posts"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "content"},
+     *             @OA\Property(property="title", type="string", maxLength=30, example="My Post Title"),
+     *             @OA\Property(property="content", type="string", maxLength=255, example="This is the content of my post.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Post Created Successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Post Created Successfully"),
+     *             @OA\Property(property="post", ref="#/components/schemas/Post")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="title", type="array", @OA\Items(type="string", example="The title field is required.")),
+     *                 @OA\Property(property="content", type="array", @OA\Items(type="string", example="The content field is required."))
+     *             )
+     *         )
+     *     )
+     * )
+     */
+
     public function store(Request $request)
     {
 
-        $validateData = Validator::make($request->all(),
-        [
-            'title'=>'required|string|max:30',
-            'content'=>'required|string|max:255',
-        ]
+        $validateData = Validator::make(
+            $request->all(),
+            [
+                'title' => 'required|string|max:30',
+                'content' => 'required|string|max:255',
+            ]
         );
 
-        if($validateData->fails()){
+        if ($validateData->fails()) {
             return response()->json([
                 'status' => false,
-                "errors"=>$validateData->errors()
-            ],401);
+                "errors" => $validateData->errors()
+            ], 401);
         }
 
         $post = Post::create([
-            "title"=>$request->title,
-            "content"=>$request->content,
-            "user_id"=>Auth::id(),
+            "title" => $request->title,
+            "content" => $request->content,
+            "user_id" => Auth::id(),
         ]);
 
         return response()->json([
             'status' => true,
-            "message"=>'Post Created Successfully',
+            "message" => 'Post Created Successfully',
             "post" => $post,
-        ],201);
+        ], 201);
     }
 
-    public function update(Request $request , $id)
+    /**
+     * @OA\Put(
+     *     path="/api/post/update/{id}",
+     *     summary="Update your post",
+     *     description="Allows an authenticated user to update their own post",
+     *     tags={"Posts"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         in="path",
+     *         name="id",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "content"},
+     *             @OA\Property(property="title", type="string", maxLength=30, example="Update post title"),
+     *             @OA\Property(property="content", type="string", maxLength=255, example="Update post content")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Post Updated Successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Post Updated Successfully"),
+     *             @OA\Property(property="post", ref="#/components/schemas/Post")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Validation errors",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized access",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You Only Can Edit Your Posts")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Post not found",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Post Not Found")
+     *         )
+     *     )
+     * )
+     */
+
+
+    public function update(Request $request, $id)
     {
         $post = Post::find($id);
 
-        if($post == null){
+        if ($post == null) {
             return response()->json([
                 'status' => false,
                 "message" => 'Post Not Found'
-            ],404);
+            ], 404);
         }
 
-        if($post->user_id !== Auth::id()){
-            return response()->json([
-                'status'=> false,
-                'message'=>'You Only Can Edit Your Posts'
-            ],403);
-        }
-
-        $validateData=Validator::make($request->all(),
-        [
-            'title'=>'sometimes|string|max:30',
-            'content'=>'sometimes|string|max:255',
-        ]
-        );
-
-        if($validateData->fails()){
+        if ($post->user_id !== Auth::id()) {
             return response()->json([
                 'status' => false,
-                "errors"=>$validateData->errors()
-            ],401);
+                'message' => 'You Only Can Edit Your Posts'
+            ], 403);
+        }
+
+        $validateData = Validator::make(
+            $request->all(),
+            [
+                'title' => 'sometimes|string|max:30',
+                'content' => 'sometimes|string|max:255',
+            ]
+        );
+
+        if ($validateData->fails()) {
+            return response()->json([
+                'status' => false,
+                "errors" => $validateData->errors()
+            ], 401);
         }
 
         $post->update([
-            "title"=>$request->title,
-            "content"=>$request->content,
+            "title" => $request->title,
+            "content" => $request->content,
         ]);
 
         return response()->json([
             'status' => true,
-            "message"=>'Post Updated Successfully',
-            "post"=>new PostResource($post)
-        ],201);
-
+            "message" => 'Post Updated Successfully',
+            "post" => new PostResource($post)
+        ], 201);
     }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/post/delete/{id}",
+     *     summary="Delete your post",
+     *     description="Allows an authenticated user to delete their own post",
+     *     tags={"Posts"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         in="path",
+     *         name="id",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Post Deleted Successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Post Deleted Successfully")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized access",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="You Only Can Edit Your Posts")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Post not found",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Post Not Found")
+     *         )
+     *     )
+     * )
+     */
 
     public function delete($id)
     {
         $post = Post::find($id);
 
-        if($post == null){
+        if ($post == null) {
             return response()->json([
                 'status' => false,
                 "message" => 'Post Not Found'
-            ],404);
+            ], 404);
         }
 
-        if($post->user_id !== Auth::id()){
+        if ($post->user_id !== Auth::id()) {
             return response()->json([
-                'status'=>false,
-                'message'=>'You Only Can Delete Your Posts'
-            ],403);
+                'status' => false,
+                'message' => 'You Only Can Delete Your Posts'
+            ], 403);
         }
 
         $post->delete();
 
         return response()->json([
             'status' => true,
-            "message"=>'Post Deleted Successfully'
-        ],201);
-
+            "message" => 'Post Deleted Successfully'
+        ], 201);
     }
-
-
 }
