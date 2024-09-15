@@ -34,7 +34,7 @@ class PostFeatureTest extends TestCase
         ]);
     }
 
-        public function unauthanicatedUsersCannotCreatePosts()
+    public function unauthanicatedUsersCannotCreatePosts()
     {
         $response = $this->postJson('/api/post/create',[
             'title' => "New Title",

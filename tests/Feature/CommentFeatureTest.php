@@ -17,68 +17,87 @@ class CommentFeatureTest extends TestCase
 
     // use RefreshDatabase;
 
-    // public function UsersCanCreateComments()
-    // {
-    //     $user = User::factory()->create();
-    //     $post = Post::factory()->create();
+    //create
 
-    //     Sanctum::actingAs($user);
+    public function UsersCanCreateComments()
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->create();
 
-    //     $resonse = $this->postJson("api/comment/create/{$post->id}",[
-    //         "post_id"=>$post->id,
-    //         "content"=>"Comment Content",
-    //     ]);
+        Sanctum::actingAs($user);
 
-    //     $resonse->assertStatus(201);
-    //     $resonse->assertJson([
-    //         "status"=>true,
-    //         "message"=>"Comment Added Successfully",
-    //         "comment"=>"Comment Content",
-    //     ]);
+        $resonse = $this->postJson("api/comment/create/{$post->id}",[
+            "post_id"=>$post->id,
+            "content"=>"Comment Content",
+        ]);
 
-    // }
+        $resonse->assertStatus(201);
+        $resonse->assertJson([
+            "status"=>true,
+            "message"=>"Comment Added Successfully",
+            "comment"=>"Comment Content",
+        ]);
 
-    // public function userCanDeleteComments()
-    // {
-    //     $user = User::factory()->create();
-    //     $post = Post::factory()->create();
-    //     $comment = Comment::factory()->create([
-    //         "user_id"=>$user->id,
-    //         "post_id"=>$post->id,
-    //         "content"=>"Commet Content",
-    //     ]);
+    }
 
-    //     Sanctum::actingAs($user);
+    public function unauthanicatedUsersCannotCreateComments()
+    {
+        $post = Post::factory()->create();
+        $response = $this->postJson("/api/comment/create/{$post->id}",[
+            'post_id' => $post->id,
+            'content' => 'Comment Content',
+        ]);
 
-    //     $response = $this->deleteJson("/api/comment/delete/{$comment->id}");
+        $response->assertStatus(401);
+        $response->assertJson([
+            "message" => "Unauthenticated.",
+        ]);
 
-    //     $response->assertStatus(201);
-    //     $response->assertJson([
-    //         "status"=>true,
-    //         "message"=>"Comment Deleted Successfully",
-    //     ]);
-    // }
+    }
 
-    // public function usersCanOnlyDeleteTheirComments()
-    // {
-    //     $user = User::factory()->create();
-    //     $owner = User::factory()->create();
-    //     $post = Post::factory()->create();
-    //     Sanctum::actingAs($user);
-    //     $comment = Comment::factory()->create([
-    //         "user_id"=>$owner->id,
-    //         "post_id"=>$post->id,
-    //         "content"=>"Comment Content",
-    //     ]);
+    //Delete
 
-    //     $response = $this->deleteJson("/api/comment/delete/{$comment->id}");
-    //     $response->assertStatus(403);
-    //     $response->assertJson([
-    //         "status"=>false,
-    //         "message"=>"You Can Only Delete Your Comments"
-    //     ]);
+    public function userCanDeleteComments()
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->create();
+        $comment = Comment::factory()->create([
+            "user_id"=>$user->id,
+            "post_id"=>$post->id,
+            "content"=>"Commet Content",
+        ]);
 
-    // }
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson("/api/comment/delete/{$comment->id}");
+
+        $response->assertStatus(201);
+        $response->assertJson([
+            "status"=>true,
+            "message"=>"Comment Deleted Successfully",
+        ]);
+    }
+
+    public function usersCanOnlyDeleteTheirComments()
+    {
+        $user = User::factory()->create();
+        $owner = User::factory()->create();
+        $post = Post::factory()->create();
+        Sanctum::actingAs($user);
+        $comment = Comment::factory()->create([
+            "user_id"=>$owner->id,
+            "post_id"=>$post->id,
+            "content"=>"Comment Content",
+        ]);
+
+        $response = $this->deleteJson("/api/comment/delete/{$comment->id}");
+        $response->assertStatus(403);
+        $response->assertJson([
+            "status"=>false,
+            "message"=>"You Can Only Delete Your Comments"
+        ]);
+
+    }
 
     public function DeleteCommentNotFound()
     {
@@ -86,7 +105,7 @@ class CommentFeatureTest extends TestCase
         $post = Post::factory()->create();
         Sanctum::actingAs($user);
         $nonExistID=0;
-        
+
         $response = $this->deleteJson("/api/comment/delete/{$nonExistID}");
         $response->assertStatus(404);
         $response->assertJson([
